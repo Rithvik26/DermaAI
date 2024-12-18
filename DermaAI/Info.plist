@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>DermaAI</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yourcompany.dermaai</string>
+    <key>CFBundleName</key>
+    <string>DermaAI</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Use Face ID to sign in to your account</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <!-- Google Sign In -->
+    <key>GIDClientID</key>
+    <string>220571115383-37l556ukumdljgl2n0md0n18e4sc9mm1.apps.googleusercontent.com</string>
+    
+    <!-- Combined URL Types for both Google and Apple Sign In -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.220571115383-37l556ukumdljgl2n0md0n18e4sc9mm1</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>golthi.DermaAI</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>
