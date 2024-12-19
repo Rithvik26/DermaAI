@@ -28,6 +28,7 @@ struct AnalyzerView: View {
                             withAnimation {
                                 viewModel.analysisResults = []
                             }
+                            
                         }
                     }
                 }
@@ -107,6 +108,7 @@ struct AnalyzerView: View {
                     .background(Color.blue)
                     .cornerRadius(10)
                 }
+                .disabled(viewModel.patients.isEmpty)
                 
                 Button(action: testAPI) {
                     HStack {
@@ -234,11 +236,7 @@ struct AnalyzerView: View {
         isTesting = true
         Task {
             do {
-                let testMessage = [
-                    ["role": "user", "content": "Reply with: Test successful"]
-                ]
-                
-                let response = try await viewModel.testAPI(messages: testMessage)
+                let response = try await viewModel.testAPI()
                 await MainActor.run {
                     isTesting = false
                     if response.contains("Test successful") {
@@ -260,9 +258,6 @@ struct AnalyzerView: View {
     }
 }
 
-// Preview provider
-struct AnalyzerView_Previews: PreviewProvider {
-    static var previews: some View {
-        AnalyzerView(viewModel: PatientViewModel())
-    }
+#Preview {
+    AnalyzerView(viewModel: PatientViewModel())
 }

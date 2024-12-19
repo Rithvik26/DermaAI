@@ -14,7 +14,7 @@ class PatientViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var searchText = ""
-
+    
     
     // MARK: - Private Properties
     private let firestoreService: FirestoreService
@@ -22,23 +22,23 @@ class PatientViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var firestoreListener: ListenerRegistration?
 #if DEBUG
-private let apiKey = Bundle.main.infoDictionary?["FIREBASE_API_KEY"] as? String ?? ""
+    private let apiKey = Bundle.main.infoDictionary?["FIREBASE_API_KEY"] as? String ?? ""
 #else
-private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? ""
+    private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? ""
 #endif
     private let db = Firestore.firestore()
     
     var filteredPatients: [Patient] {
-            guard !searchText.isEmpty else { return patients }
-            return patients.filter { patient in
-                patient.name.localizedCaseInsensitiveContains(searchText) ||
-                patient.diagnosisNotes.localizedCaseInsensitiveContains(searchText) ||
-                patient.medications.contains { medication in
-                    medication.name.localizedCaseInsensitiveContains(searchText) ||
-                    medication.dosage.localizedCaseInsensitiveContains(searchText)
-                }
+        guard !searchText.isEmpty else { return patients }
+        return patients.filter { patient in
+            patient.name.localizedCaseInsensitiveContains(searchText) ||
+            patient.diagnosisNotes.localizedCaseInsensitiveContains(searchText) ||
+            patient.medications.contains { medication in
+                medication.name.localizedCaseInsensitiveContains(searchText) ||
+                medication.dosage.localizedCaseInsensitiveContains(searchText)
             }
         }
+    }
     
     // MARK: - Initialization
     init(firestoreService: FirestoreService = .shared, authService: AuthenticationService = .shared) {
@@ -55,10 +55,10 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
     }
     
     deinit {
-            Task { @MainActor in
-                cleanupFirestoreListener()
-            }
+        Task { @MainActor in
+            cleanupFirestoreListener()
         }
+    }
     
     
     
@@ -325,7 +325,7 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
         print("✅ Processed total of \(sortedPatients.count) patients")
         return sortedPatients
     }
-
+    
     private func decryptMedications(_ medications: [[String: Any]]) async throws -> [[String: Any]] {
         var decryptedMedications: [[String: Any]] = []
         
@@ -370,197 +370,56 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
     }
     
     // MARK: - Analysis Methods
+    // In PatientViewModel
     func analyzePatientsInBatch() async throws {
-        guard !patients.isEmpty else {
-            throw APIError.invalidData
-        }
-        
-        isLoading = true
-        defer { isLoading = false }
-        
-        let patientData = patients.map { patient in
-            ["name": patient.name, "diagnosis": patient.diagnosisNotes]
-        }
-        
-        do {
-            let analysisResult = try await performBatchAnalysis(patientData: patientData)
-            self.analysisResults = analysisResult
-            self.updateDiagnosisGroups()
+            isLoading = true
+            defer { isLoading = false }
             
-            Task {
-                try? await self.storeAnalysisResults(analysisResult)
+            do {
+                let analysisResult = try await ClaudeAPIService.shared.analyzePatientsData(patients)
+                self.analysisResults = analysisResult
+                self.updateDiagnosisGroups()
+                
+                // Store results without waiting
+                Task {
+                    await storeAnalysisResults(analysisResult)
+                }
+            } catch {
+                handleError(error)
+                throw error
             }
-        } catch {
-            handleError(error)
-            throw error
         }
-    }
-    
-    private func performBatchAnalysis(patientData: [[String: String]]) async throws -> [DiseaseGroup] {
-        guard let endpoint = URL(string: "https://api.anthropic.com/v1/messages") else {
-            throw APIError.invalidURL
-        }
-        
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        
-        let headers = [
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2024-02-15"
-        ]
-        
-        headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
-        
-        let patientList = patientData.map { "Patient \($0["name"] ?? ""): \($0["diagnosis"] ?? "")" }
-            .joined(separator: "\n")
-        
-        let systemPrompt = "You are a dermatology expert. Analyze the patient diagnoses and group them by condition."
-        
-        let messageRequest = [
-            "model": "claude-3-5-sonnet-20241022",
-            "max_tokens": 1024,
-            "messages": [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": """
-                    Analyze these dermatological diagnoses and group patients by common skin conditions:
-                    
-                    \(patientList)
-                    
-                    Respond with only a JSON object in this exact format:
-                    {
-                        "groups": [
-                            {
-                                "disease": "Disease Name",
-                                "patients": ["Patient Name 1", "Patient Name 2"],
-                                "recommended_medications": ["Medication 1", "Medication 2"]
-                            }
-                        ]
-                    }
-                    """]
-            ]
-        ] as [String: Any]
-        
-        return try await sendAnalysisRequest(request: request, messageRequest: messageRequest)
-    }
-    
-    private func sendAnalysisRequest(request: URLRequest, messageRequest: [String: Any]) async throws -> [DiseaseGroup] {
-        let jsonData = try JSONSerialization.data(withJSONObject: messageRequest)
-        var request = request
-        request.httpBody = jsonData
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        if httpResponse.statusCode != 200 {
-            if let errorStr = String(data: data, encoding: .utf8) {
-                print("API Error Response: \(errorStr)")
-            }
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
-        }
-        
-        let claudeResponse = try JSONDecoder().decode(ClaudeAPIResponse.self, from: data)
-        
-        guard let content = claudeResponse.content.first?.text,
-              let jsonStart = content.firstIndex(of: "{"),
-              let jsonData = String(content[jsonStart...]).data(using: .utf8) else {
-            throw APIError.invalidData
-        }
-        
-        let analysisResponse = try JSONDecoder().decode(AnalysisResponse.self, from: jsonData)
-        
-        return analysisResponse.groups.map { group in
-            DiseaseGroup(
-                disease: group.disease,
-                patients: group.patients,
-                recommendedMedications: group.recommended_medications
-            )
-        }
-    }
-    
-    private func storeAnalysisResults(_ results: [DiseaseGroup]) async throws {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        
-        let analysisData: [[String: Any]] = results.map { group in
-            [
-                "disease": group.disease,
-                "patients": group.patients,
-                "recommendedMedications": group.recommendedMedications,
-                "timestamp": FieldValue.serverTimestamp()
-            ]
-        }
-        
-        try await db.collection("users").document(userId)
-            .collection("analyses")
-            .document(UUID().uuidString)
-            .setData(["groups": analysisData])
-    }
-    
-    // MARK: - API Testing
-    func testAPI(messages: [[String: String]] = []) async throws -> String {
-        guard let endpoint = URL(string: "https://api.anthropic.com/v1/messages") else {
-            throw APIError.invalidURL
-        }
-        
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        
-        let headers = [
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-                        "anthropic-version": "2024-02-15"
+
+        private func storeAnalysisResults(_ results: [DiseaseGroup]) async {
+            guard let userId = Auth.auth().currentUser?.uid else { return }
+            
+            do {
+                let analysisData: [[String: Any]] = results.map { group in
+                    [
+                        "disease": group.disease,
+                        "patients": group.patients,
+                        "recommendedMedications": group.recommendedMedications,
+                        "timestamp": FieldValue.serverTimestamp()
                     ]
-                    
-                    headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
-                    
-                    let messageRequest = [
-                        "model": "claude-3-5-sonnet-20241022",
-                        "max_tokens": 1024,
-                        "messages": [
-                            [
-                                "role": "user",
-                                "content": "Please respond with 'Test successful' if you receive this message."
-                            ]
-                        ]
-                    ] as [String: Any]
-                    
-                    let jsonData = try JSONSerialization.data(withJSONObject: messageRequest)
-                    request.httpBody = jsonData
-                    
-                    let (data, response) = try await URLSession.shared.data(for: request)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw APIError.invalidResponse
-                    }
-                    
-                    if httpResponse.statusCode != 200 {
-                        if let errorStr = String(data: data, encoding: .utf8) {
-                            print("Error Response: \(errorStr)")
-                        }
-                        throw APIError.serverError(statusCode: httpResponse.statusCode)
-                    }
-                    
-                    let claudeResponse = try JSONDecoder().decode(ClaudeAPIResponse.self, from: data)
-                    return claudeResponse.content.first?.text ?? ""
                 }
                 
-                // MARK: - Error Handling
-                struct DiseaseGroup: Identifiable, Codable {
-                    let id: UUID
-                    let disease: String
-                    let patients: [String]
-                    let recommendedMedications: [String]
-                    let timestamp: Date?
-                    
-                    init(id: UUID = UUID(), disease: String, patients: [String], recommendedMedications: [String], timestamp: Date? = nil) {
-                        self.id = id
-                        self.disease = disease
-                        self.patients = patients
-                        self.recommendedMedications = recommendedMedications
-                        self.timestamp = timestamp
-                    }
-                }
+                try await db.collection("users").document(userId)
+                    .collection("analyses")
+                    .document(UUID().uuidString)
+                    .setData(["groups": analysisData])
+                
+                print("✅ Analysis results stored successfully")
+            } catch {
+                print("❌ Failed to store analysis results: \(error.localizedDescription)")
+                // Handle error but don't throw since this is a background operation
+                errorMessage = "Failed to save analysis results: \(error.localizedDescription)"
+                showError = true
             }
+        }
+    
+    func testAPI() async throws -> String {
+        return try await ClaudeAPIService.shared.testAPI()
+    }
+    
+    
+}
