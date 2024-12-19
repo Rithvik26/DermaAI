@@ -3,8 +3,7 @@
 DermaAI is a secure and intelligent iOS application designed for dermatology professionals to manage patient records, analyze skin conditions, and get AI-powered treatment recommendations.
 
 ## UI
-
-<img width="351" alt="Screenshot 2024-12-19 at 3 58 15 PM" src="https://github.com/user-attachments/assets/80844b4f-c42b-4234-9a07-97c2c78270db" />
+<img width="340" alt="Screenshot 2024-12-19 at 5 58 50 PM" src="https://github.com/user-attachments/assets/36c29a6f-7908-4800-ab1d-768377c3cf81" />
 <img width="351" alt="Screenshot 2024-12-19 at 3 58 34 PM" src="https://github.com/user-attachments/assets/cca1237a-820e-49cd-ad78-2ade80054530" />
 <img width="351" alt="Screenshot 2024-12-19 at 3 58 41 PM" src="https://github.com/user-attachments/assets/4d3e87df-0ad8-4f3e-b1e2-5d096722df7a" />
 <img width="351" alt="Screenshot 2024-12-19 at 3 59 35 PM" src="https://github.com/user-attachments/assets/21c097e5-c75c-47c2-89cd-65db6ec29156" />
@@ -30,7 +29,6 @@ DermaAI is a secure and intelligent iOS application designed for dermatology pro
 - Multiple sign-in options:
   - Email/Password
   - Google Sign-In
-  - Apple Sign-In
 - Biometric authentication (Face ID/Touch ID)
 - Secure password reset functionality
 
@@ -104,7 +102,6 @@ DermaAI is a secure and intelligent iOS application designed for dermatology pro
 - Active internet connection for synchronization
 - Firebase project setup
 - Claude API key
-- Apple Developer account (for Apple Sign In capability)
 
 ## Setup Instructions
 
@@ -124,14 +121,12 @@ DermaAI is a secure and intelligent iOS application designed for dermatology pro
    - Enable Authentication methods in Firebase Console:
      - Email/Password
      - Google Sign In
-     - Apple Sign In
 
 3. Configure Firebase Authentication:
    - In the Firebase Console, go to Authentication > Sign-in method
    - Enable the required authentication providers:
      - Email/Password
      - Google
-     - Apple
    - Configure OAuth consent screen if required for Google Sign In
 
 4. Set up API Keys:
@@ -149,7 +144,6 @@ DermaAI is a secure and intelligent iOS application designed for dermatology pro
 5. Enable Capabilities:
    - In Xcode, select your target and go to the Signing & Capabilities tab
    - Add the following capabilities:
-     - Sign in with Apple
      - Keychain Sharing
      - Face ID usage (if required)
 
