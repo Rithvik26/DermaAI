@@ -13,6 +13,8 @@ class PatientViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isLoading = false
     @Published var showError = false
+    @Published var searchText = ""
+
     
     // MARK: - Private Properties
     private let firestoreService: FirestoreService
@@ -25,6 +27,18 @@ private let apiKey = Bundle.main.infoDictionary?["FIREBASE_API_KEY"] as? String 
 private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? ""
 #endif
     private let db = Firestore.firestore()
+    
+    var filteredPatients: [Patient] {
+            guard !searchText.isEmpty else { return patients }
+            return patients.filter { patient in
+                patient.name.localizedCaseInsensitiveContains(searchText) ||
+                patient.diagnosisNotes.localizedCaseInsensitiveContains(searchText) ||
+                patient.medications.contains { medication in
+                    medication.name.localizedCaseInsensitiveContains(searchText) ||
+                    medication.dosage.localizedCaseInsensitiveContains(searchText)
+                }
+            }
+        }
     
     // MARK: - Initialization
     init(firestoreService: FirestoreService = .shared, authService: AuthenticationService = .shared) {
@@ -45,6 +59,8 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
                 cleanupFirestoreListener()
             }
         }
+    
+    
     
     // MARK: - Authentication Handling
     private func setupAuthSubscription() {
