@@ -1,3 +1,11 @@
+//
+//  UserSettingsView.swift
+//  DermaAI
+//
+//  Created by Rithvik Golthi on 12/19/24.
+//
+
+
 import SwiftUI
 import FirebaseAuth
 
