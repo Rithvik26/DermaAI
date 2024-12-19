@@ -186,7 +186,30 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
         try await firestoreService.deletePatient(patient)
         print("✅ Successfully deleted patient: \(patient.name)")
     }
-    
+    // In PatientViewModel class
+    func deleteMedication(_ medication: Medication, from patient: Patient) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        var updatedPatient = patient
+        updatedPatient.medications.removeAll { $0.id == medication.id }
+        
+        // Encrypt the updated medications if necessary
+        var encryptedMedications: [Medication] = []
+        for var med in updatedPatient.medications {
+            med.dosage = try firestoreService.encryptionService.encrypt(med.dosage)
+            encryptedMedications.append(med)
+        }
+        updatedPatient.medications = encryptedMedications
+        
+        // Update the patient in Firestore
+        try await updatePatient(updatedPatient)
+        
+        // Update the local patients array immediately
+        if let index = patients.firstIndex(where: { $0.id == patient.id }) {
+            patients[index] = updatedPatient
+        }
+    }
     // MARK: - Helper Methods
     private func withTimeout<T>(seconds: Double, operation: @escaping () async throws -> T) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in

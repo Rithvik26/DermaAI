@@ -135,37 +135,45 @@ struct EditPatientView: View {
     
     
     private func saveUpdatedPatient() {
-        guard !editedName.trimmingCharacters(in: .whitespaces).isEmpty else {
-            alertMessage = "Please enter a patient name"
-            showAlert = true
-            return
-        }
-        
-        isLoading = true
-        
-        Task {
-            do {
-                // Create patient with unencrypted data - encryption happens in ViewModel
-                let updatedPatient = Patient(
-                    id: patient.id,
-                    name: editedName.trimmingCharacters(in: .whitespaces),
-                    diagnosisNotes: editedDiagnosisNotes.trimmingCharacters(in: .whitespaces),
-                    medications: editedMedications.filter { !$0.name.isEmpty },
-                    userId: AuthenticationService.shared.currentUser?.uid
-                )
-                
-                try await viewModel.updatePatient(updatedPatient)
-                await MainActor.run {
-                    isLoading = false
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isLoading = false
-                    alertMessage = error.localizedDescription
-                    showAlert = true
+            guard !editedName.trimmingCharacters(in: .whitespaces).isEmpty else {
+                alertMessage = "Please enter a patient name"
+                showAlert = true
+                return
+            }
+            
+            isLoading = true
+            
+            Task {
+                do {
+                    // Create patient with unencrypted data - encryption happens in ViewModel
+                    let updatedPatient = Patient(
+                        id: patient.id,
+                        name: editedName.trimmingCharacters(in: .whitespaces),
+                        diagnosisNotes: editedDiagnosisNotes.trimmingCharacters(in: .whitespaces),
+                        medications: editedMedications.filter { !$0.name.isEmpty },
+                        userId: AuthenticationService.shared.currentUser?.uid
+                    )
+                    
+                    try await viewModel.updatePatient(updatedPatient)
+                    await MainActor.run {
+                        isLoading = false
+                        
+                        // Post a notification to update the detail view
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("PatientUpdated"),
+                            object: nil,
+                            userInfo: ["patientId": patient.id]
+                        )
+                        
+                        dismiss()
+                    }
+                } catch {
+                    await MainActor.run {
+                        isLoading = false
+                        alertMessage = error.localizedDescription
+                        showAlert = true
+                    }
                 }
             }
         }
-    }
 }
