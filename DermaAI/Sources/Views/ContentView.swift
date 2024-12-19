@@ -11,24 +11,34 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(viewModel.patients) { patient in
-                    NavigationLink(destination: PatientDetailView(patient: patient, viewModel: viewModel)) {
-                        PatientRowView(patient: patient)
+            VStack(spacing: 0) {
+                // Search bar
+                SearchBar(text: $viewModel.searchText)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                
+                List {
+                    ForEach(viewModel.filteredPatients) { patient in
+                        NavigationLink(destination: PatientDetailView(patient: patient, viewModel: viewModel)) {
+                            PatientRowView(patient: patient)
+                        }
                     }
-                }
-                .onDelete { indexSet in
-                    Task {
-                        do {
-                            for index in indexSet {
-                                try await viewModel.deletePatient(viewModel.patients[index])
+                    .onDelete { indexSet in
+                        Task {
+                            do {
+                                // Convert filtered indices to original array indices
+                                let patientsToDelete = indexSet.map { viewModel.filteredPatients[$0] }
+                                for patient in patientsToDelete {
+                                    try await viewModel.deletePatient(patient)
+                                }
+                            } catch {
+                                errorMessage = error.localizedDescription
+                                showError = true
                             }
-                        } catch {
-                            errorMessage = error.localizedDescription
-                            showError = true
                         }
                     }
                 }
+                .listStyle(PlainListStyle())
             }
             .navigationTitle("DermaAI")
             .toolbar {
@@ -83,5 +93,33 @@ struct ContentView: View {
                 }
             }
         }
+    }
+}
+
+// Custom SearchBar View
+struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search patients...", text: $text)
+                .textFieldStyle(PlainTextFieldStyle())
+                .autocapitalization(.none)
+            
+            if !text.isEmpty {
+                Button(action: {
+                    text = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
     }
 }
