@@ -4,12 +4,19 @@ DermaAI is a secure and intelligent iOS application designed for dermatology pro
 
 ## UI
 
-<img width="351" alt="Screenshot 2024-12-17 at 7 32 35 PM" src="https://github.com/user-attachments/assets/767d4cbd-00ba-43df-9fe7-d59c0598bc65" />
-<img width="351" alt="Screenshot 2024-12-17 at 7 32 45 PM" src="https://github.com/user-attachments/assets/b94d2223-cb9a-4ef7-b94d-45271d756a97" />
-<img width="351" alt="Screenshot 2024-12-17 at 7 32 52 PM" src="https://github.com/user-attachments/assets/4250748a-c690-4886-8395-12901605c9f2" />
-<img width="351" alt="Screenshot 2024-12-18 at 7 25 34 AM" src="https://github.com/user-attachments/assets/e7cb6454-89d2-4aa9-937d-fcb453d41c1c" />
-<img width="351" alt="Screenshot 2024-12-18 at 7 25 44 AM" src="https://github.com/user-attachments/assets/453fec81-2258-473c-bc01-ce4921c84181" />
-<img width="351" alt="Screenshot 2024-12-18 at 7 26 02 AM" src="https://github.com/user-attachments/assets/4b5a9401-6757-4d5e-b1ec-89b345d00e8d" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 58 15 PM" src="https://github.com/user-attachments/assets/80844b4f-c42b-4234-9a07-97c2c78270db" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 58 34 PM" src="https://github.com/user-attachments/assets/cca1237a-820e-49cd-ad78-2ade80054530" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 58 41 PM" src="https://github.com/user-attachments/assets/4d3e87df-0ad8-4f3e-b1e2-5d096722df7a" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 59 35 PM" src="https://github.com/user-attachments/assets/21c097e5-c75c-47c2-89cd-65db6ec29156" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 59 50 PM" src="https://github.com/user-attachments/assets/047e59b6-5416-4445-8353-c0d4833b7b1c" />
+<img width="351" alt="Screenshot 2024-12-19 at 3 59 55 PM" src="https://github.com/user-attachments/assets/a4066a20-1663-4738-a4d6-ae2896324979" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 00 25 PM" src="https://github.com/user-attachments/assets/8f893d5b-d0c7-4bfc-9a8d-d9cf27132e38" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 00 30 PM" src="https://github.com/user-attachments/assets/e43b0d09-7630-4414-ae9e-46b13a34a5b4" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 00 40 PM" src="https://github.com/user-attachments/assets/7d5b39c3-b22e-470a-b931-16f301b3bd06" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 00 48 PM" src="https://github.com/user-attachments/assets/37bc968f-aca1-4697-938f-6d1421de1857" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 00 55 PM" src="https://github.com/user-attachments/assets/6d74042a-d0b0-4f55-9635-11899dc5e8a9" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 01 05 PM" src="https://github.com/user-attachments/assets/4e80cea6-80df-4710-9a71-339d95b5ab77" />
+<img width="351" alt="Screenshot 2024-12-19 at 4 01 11 PM" src="https://github.com/user-attachments/assets/776854ba-9d13-4c06-ae9f-060b1a308a07" />
 
 
 ## Core Features
