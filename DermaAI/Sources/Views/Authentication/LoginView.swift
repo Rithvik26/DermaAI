@@ -1,6 +1,7 @@
 import SwiftUI
 import GoogleSignInSwift
 import UIKit
+import Photos
 
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
