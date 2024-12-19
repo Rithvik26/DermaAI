@@ -186,6 +186,21 @@ private let apiKey = ProcessInfo.processInfo.environment["FIREBASE_API_KEY"] ?? 
         try await firestoreService.deletePatient(patient)
         print("✅ Successfully deleted patient: \(patient.name)")
     }
+    // Add to PatientViewModel class
+    @MainActor
+    func batchDeletePatients(_ patients: [Patient]) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        for patient in patients {
+            do {
+                try await firestoreService.deletePatient(patient)
+            } catch {
+                print("Error deleting patient \(patient.name): \(error.localizedDescription)")
+                throw error
+            }
+        }
+    }
     // In PatientViewModel class
     func deleteMedication(_ medication: Medication, from patient: Patient) async throws {
         isLoading = true
