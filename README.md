@@ -1,6 +1,6 @@
 # DermaAI
 
-DermaAI is a SwiftUI-based iOS application that helps dermatologists and healthcare providers manage patient data, track skin conditions, and get AI-powered analysis for diagnosis grouping and treatment recommendations.
+DermaAI is a secure and intelligent iOS application designed for dermatology professionals to manage patient records, analyze skin conditions, and get AI-powered treatment recommendations.
 
 ## UI
 
@@ -11,128 +11,171 @@ DermaAI is a SwiftUI-based iOS application that helps dermatologists and healthc
 <img width="351" alt="Screenshot 2024-12-18 at 7 25 44 AM" src="https://github.com/user-attachments/assets/453fec81-2258-473c-bc01-ce4921c84181" />
 <img width="351" alt="Screenshot 2024-12-18 at 7 26 02 AM" src="https://github.com/user-attachments/assets/4b5a9401-6757-4d5e-b1ec-89b345d00e8d" />
 
-## Features
 
-- **Patient Management**
-  - Add and edit patient records
-  - Track diagnosis notes
-  - Manage medications with dosage and frequency
-  - View detailed patient histories
+## Core Features
 
-- **AI-Powered Analysis**
+### Patient Management
+- Secure patient record creation and management
+- Real-time synchronization across devices
+- Offline support for data access
 
-  - Group patients by common skin conditions
-  - Get treatment recommendations
-  - Batch analysis of multiple patient records
-  - API connection testing functionality
+### Authentication Options
+- Multiple sign-in options:
+  - Email/Password
+  - Google Sign-In
+  - Apple Sign-In
+- Biometric authentication (Face ID/Touch ID)
+- Secure password reset functionality
 
-- **Medication Tracking**
-  - Record multiple medications per patient
-  - Track dosage information
-  - Monitor treatment frequencies
-  - Easy medication management interface
+### Diagnosis & Analysis
+- AI-powered analysis of skin conditions
+- Patient grouping by common conditions
+- Treatment recommendations
+- Batch analysis capabilities for multiple patients
+
+### Medication Tracking
+- Detailed medication management
+- Dosage and frequency tracking
+- Secure storage of prescription information
 
 ## Technical Architecture
 
-The app follows the MVVM (Model-View-ViewModel) architecture pattern and is built using:
+### Frontend
+- SwiftUI-based user interface
+- MVVM architecture
+- Responsive design with offline support
+- Real-time data updates
 
-- SwiftUI for the user interface
-- Combine framework for reactive programming
-- Claude API for AI-powered analysis
-- URLSession for network requests
+### Backend & Services
+- Firebase Authentication
+- Cloud Firestore for data storage
+- Claude API integration for AI analysis
+- End-to-end encryption using CryptoKit
 
-### Key Components
 
-- `PatientViewModel`: Manages patient data and handles API communication
-- `AnalyzerView`: Provides the AI analysis interface
-- `Patient` and `Medication` models: Core data structures
-- `ClaudeAPIService`: Handles API integration
+## Privacy & Security Features
 
+### End-to-End Encryption
+- AES-GCM encryption for all patient data
+- Secure key storage in device keychain
+- No plaintext data storage
+- Encrypted data synchronization across devices
+
+### Access Control
+- Multi-factor authentication support
+- Biometric authentication (Face ID/Touch ID)
+- Role-based access control
+- Automatic session timeout
+- Secure password policies
+
+### Data Protection
+- Local encryption of all patient records
+- Encrypted cloud backups
+- No third-party access to patient information
+- Offline data access with maintained encryption
+- Secure data deletion capabilities
+
+### Compliance & Auditing
+- Comprehensive audit logging
+- Network security monitoring
+- Medical data privacy standards compliance
+- Regular security audits
+- Activity tracking and monitoring
+
+### Network Security
+- Secure data transmission
+- Real-time network monitoring
+- Offline mode support
+- Certificate pinning
+- Encrypted API communications
+
+  
 ## Requirements
 
+- Xcode 15.0 or later
 - iOS 15.0 or later
-- Xcode 13.0 or later
-- Swift 5.5 or later
-- Valid Claude API key
+- Active internet connection for synchronization
+- Firebase project setup
+- Claude API key
+- Apple Developer account (for Apple Sign In capability)
 
-## Installation
+## Setup Instructions
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/DermaAI.git
-```
+   ```bash
+   git clone [repository-url]
+   cd DermaAI
+   ```
 
-2. Open `DermaAI.xcodeproj` in Xcode
+2. Firebase Setup:
+   - Go to the [Firebase Console](https://console.firebase.google.com/)
+   - Create a new Firebase project
+   - Add an iOS app to your Firebase project:
+     - Register your app with your bundle identifier
+     - Download the `GoogleService-Info.plist` file
+     - Add the file to your Xcode project (drag and drop into the project navigator)
+   - Enable Authentication methods in Firebase Console:
+     - Email/Password
+     - Google Sign In
+     - Apple Sign In
 
-3. Add your Claude API key:
-   - Open `PatientViewModel.swift`
-   - Replace the `apiKey` value with your actual API key
+3. Configure Firebase Authentication:
+   - In the Firebase Console, go to Authentication > Sign-in method
+   - Enable the required authentication providers:
+     - Email/Password
+     - Google
+     - Apple
+   - Configure OAuth consent screen if required for Google Sign In
 
-4. Build and run the project
+4. Set up API Keys:
+   - Create a `.xcconfig` file named `Config.xcconfig`
+   - Add your Claude API key:
+     ```
+     ANTHROPIC_API_KEY=your_api_key_here
+     ```
+   - Add your Firebase API key:
+     ```
+     FIREBASE_API_KEY=your_firebase_key_here
+     ```
+   - In Xcode, link this configuration file to your target
 
-## Configuration
+5. Enable Capabilities:
+   - In Xcode, select your target and go to the Signing & Capabilities tab
+   - Add the following capabilities:
+     - Sign in with Apple
+     - Keychain Sharing
+     - Face ID usage (if required)
 
-The app uses the Claude API for analysis. To configure:
+6. Update Bundle Identifier:
+   - Change the bundle identifier to match your Firebase configuration
+   - Update the team and signing settings in Xcode
 
-1. Ensure you have a valid API key from Anthropic
-2. Set the API key in `PatientViewModel.swift`
-3. Test the API connection using the built-in test function
+7. Build and run:
+   - Select your target device/simulator
+   - Build and run the project in Xcode
+   - Verify Firebase initialization in the console output
 
-## Usage
+## Common Setup Issues
 
-### Adding a New Patient
+1. Firebase initialization fails:
+   - Check if `GoogleService-Info.plist` is properly added to the project
+   - Verify bundle identifier matches Firebase configuration
 
-1. Tap the '+' button in the main view
-2. Enter patient information:
-   - Name
-   - Diagnosis notes
-   - Medications (if any)
-3. Save the patient record
+2. Authentication fails:
+   - Verify OAuth consent screen is properly configured
+   - Check if all required authentication methods are enabled in Firebase Console
 
-### Running Analysis
-
-1. Tap the waveform icon in the main view
-2. Click "Start Batch Analysis"
-3. View grouped results and recommendations
-
-## Security
-
-- The app does not store the API key in user defaults or on device
-- All network communications use HTTPS
-- Patient data is stored locally on the device
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Built using [Claude API](https://anthropic.com) for AI analysis
-- Uses [SwiftUI](https://developer.apple.com/xcode/swiftui/) for the user interface
-- Inspired by the need for better dermatological diagnostic tools
+3. API calls fail:
+   - Verify API keys are correctly set in configuration
+   - Check network connectivity
 
 ## Support
 
-For support, please open an issue in the GitHub repository or contact the maintainers.
+For technical support or feature requests, please create an issue in the repository or contact the development team.
 
-## Roadmap
+## License
 
-- [ ] Add support for image uploads
-- [ ] Implement local data persistence
-- [ ] Add export functionality for patient records
-- [ ] Enhance AI analysis with more detailed recommendations
-- [ ] Add support for multiple languages
-
-## Author
-
+Copyright © 2024 Rithvik Golthi. All rights reserved.
 
 
 Rithvik Golthi
