@@ -1,5 +1,4 @@
 import SwiftUI
-import AuthenticationServices
 import GoogleSignInSwift
 import UIKit
 
@@ -50,39 +49,15 @@ struct LoginView: View {
                     
                     // Social Sign In Buttons
                     VStack(spacing: 12) {
-                        // Google Sign In
-                        Button(action: {
+                        // Official Google Sign In Button
+                        GoogleSignInButton(scheme: colorScheme == .dark ? .dark : .light, style: .wide, state: viewModel.isLoading ? .disabled : .normal) {
                             if let viewController = rootViewController {
                                 Task {
                                     await viewModel.signInWithGoogle(presenting: viewController)
                                 }
                             }
-                        }) {
-                            HStack {
-                                Image(systemName: "g.circle.fill")
-                                    .font(.title3)
-                                Text("Continue with Google")
-                                    .font(.headline)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                            .cornerRadius(10)
-                            .shadow(radius: 1)
                         }
-                        .disabled(viewModel.isLoading)
-                        
-                        // Apple Sign In
-                        SignInWithAppleButton { request in
-                            request.requestedScopes = [.email, .fullName]
-                        } onCompletion: { result in
-                            viewModel.handleAppleSignIn(result)
-                        }
-                        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                        .frame(height: 50)
-                        .cornerRadius(10)
-                        .disabled(viewModel.isLoading)
+                        .frame(height: 50) // Increased from 44 to 50 to match your other buttons
                         
                         // Separator
                         HStack {

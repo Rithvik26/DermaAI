@@ -1,13 +1,4 @@
-//
-//  LoginViewModel.swift
-//  DermaAI
-//
-//  Created by Rithvik Golthi on 12/18/24.
-//
-
-
 import SwiftUI
-import AuthenticationServices
 import KeychainSwift
 
 @MainActor
@@ -20,7 +11,6 @@ class LoginViewModel: ObservableObject {
     @Published var showingForgotPassword = false
     @Published var errorMessage: String?
     @Published var showGoogleSignIn = false
-
     
     private let authService = AuthenticationService.shared
     private let biometricService = BiometricAuthService.shared
@@ -73,46 +63,24 @@ class LoginViewModel: ObservableObject {
         }
     }
     
-   
     private func saveCredentials() {
         keychain.set(email, forKey: "userEmail")
         keychain.set(password, forKey: "userPassword")
     }
-        
-        func signInWithGoogle(presenting: UIViewController) {
-            Task {
-                do {
-                    isLoading = true
-                    try await authService.signInWithGoogle(presenting: presenting)
+    
+    func signInWithGoogle(presenting: UIViewController) {
+        Task {
+            do {
+                isLoading = true
+                try await authService.signInWithGoogle(presenting: presenting)
+                isLoading = false
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showingError = true
                     isLoading = false
-                } catch {
-                    await MainActor.run {
-                        errorMessage = error.localizedDescription
-                        showingError = true
-                        isLoading = false
-                    }
                 }
             }
         }
-        
-        func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
-            Task {
-                do {
-                    isLoading = true
-                    switch result {
-                    case .success(let authorization):
-                        try await authService.handleAppleSignIn(authorization: authorization)
-                    case .failure(let error):
-                        throw error
-                    }
-                    isLoading = false
-                } catch {
-                    await MainActor.run {
-                        errorMessage = error.localizedDescription
-                        showingError = true
-                        isLoading = false
-                    }
-                }
-            }
-        }
+    }
 }
