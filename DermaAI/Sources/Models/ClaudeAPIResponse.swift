@@ -1,5 +1,7 @@
 // Directory: /Users/rithvikgolthi/Desktop/DermaAI/DermaAI/Sources/Models/ClaudeAPIResponse.swift
 
+// MARK: - Response Types
+// MARK: - Response Types
 struct ClaudeAPIResponse: Codable {
     let id: String
     let type: String
@@ -18,6 +20,7 @@ struct ClaudeAPIResponse: Codable {
         let output_tokens: Int
     }
 }
+
 struct MessageRequest: Codable {
     let model: String
     let max_tokens: Int

@@ -390,32 +390,29 @@ class PatientViewModel: ObservableObject {
             }
         }
 
-        private func storeAnalysisResults(_ results: [DiseaseGroup]) async {
-            guard let userId = Auth.auth().currentUser?.uid else { return }
-            
-            do {
-                let analysisData: [[String: Any]] = results.map { group in
-                    [
-                        "disease": group.disease,
-                        "patients": group.patients,
-                        "recommendedMedications": group.recommendedMedications,
-                        "timestamp": FieldValue.serverTimestamp()
-                    ]
-                }
-                
-                try await db.collection("users").document(userId)
-                    .collection("analyses")
-                    .document(UUID().uuidString)
-                    .setData(["groups": analysisData])
-                
-                print("✅ Analysis results stored successfully")
-            } catch {
-                print("❌ Failed to store analysis results: \(error.localizedDescription)")
-                // Handle error but don't throw since this is a background operation
-                errorMessage = "Failed to save analysis results: \(error.localizedDescription)"
-                showError = true
+    private func storeAnalysisResults(_ results: [DiseaseGroup]) async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        do {
+            let analysisData: [[String: Any]] = results.map { group in
+                group.toDictionary()
             }
+            
+            try await db.collection("users").document(userId)
+                .collection("analyses")
+                .document(UUID().uuidString)
+                .setData([
+                    "groups": analysisData,
+                    "timestamp": FieldValue.serverTimestamp()  // Add timestamp at the root level
+                ])
+            
+            print("✅ Analysis results stored successfully")
+        } catch {
+            print("❌ Failed to store analysis results: \(error.localizedDescription)")
+            errorMessage = "Failed to save analysis results: \(error.localizedDescription)"
+            showError = true
         }
+    }
     
     func testAPI() async throws -> String {
         return try await ClaudeAPIService.shared.testAPI()
