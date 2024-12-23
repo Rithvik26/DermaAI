@@ -190,3 +190,65 @@ enum FirestoreError: LocalizedError {
         }
     }
 }
+
+extension FirestoreService {
+    // Store analysis history
+    func storeAnalysisHistory(_ groups: [DiseaseGroup], analysisId: String) async throws {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw FirestoreError.notAuthenticated
+        }
+        
+        let analysisData: [String: Any] = [
+            "analysisId": analysisId,
+            "timestamp": FieldValue.serverTimestamp(),
+            "groups": groups.map { $0.toDictionary() }
+        ]
+        
+        try await db.collection("users")
+            .document(userId)
+            .collection("analysisHistory")
+            .document(analysisId)
+            .setData(analysisData)
+    }
+    
+    // Get analysis history
+    func getAnalysisHistory() async throws -> [String: [DiseaseGroup]] {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw FirestoreError.notAuthenticated
+        }
+        
+        let snapshot = try await db.collection("users")
+            .document(userId)
+            .collection("analysisHistory")
+            .order(by: "timestamp", descending: true)
+            .limit(to: 10) // Get last 10 analyses
+            .getDocuments()
+        
+        var history: [String: [DiseaseGroup]] = [:]
+        
+        for document in snapshot.documents {
+            if let analysisId = document.data()["analysisId"] as? String,
+               let groupsData = document.data()["groups"] as? [[String: Any]] {
+                
+                let groups = groupsData.compactMap { groupData -> DiseaseGroup? in
+                    guard let disease = groupData["disease"] as? String,
+                          let patients = groupData["patients"] as? [String],
+                          let medications = groupData["recommendedMedications"] as? [String] else {
+                        return nil
+                    }
+                    
+                    return DiseaseGroup(
+                        disease: disease,
+                        patients: patients,
+                        recommendedMedications: medications,
+                        analysisId: analysisId
+                    )
+                }
+                
+                history[analysisId] = groups
+            }
+        }
+        
+        return history
+    }
+}

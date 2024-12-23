@@ -78,6 +78,9 @@ struct PatientDetailView: View {
         .sheet(isPresented: $isEditing) {
             EditPatientView(patient: patient, viewModel: viewModel)
         }
+        .adaptiveSheet(isPresented: $isEditing) {
+            EditPatientView(patient: patient, viewModel: viewModel)
+        }
         .alert("Delete Patient", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {

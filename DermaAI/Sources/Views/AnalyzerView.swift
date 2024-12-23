@@ -8,6 +8,9 @@ struct AnalyzerView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showingHelp = false
+    @State private var showingExportSuccess = false
+    @State private var showingShareSheet = false
+    @State private var exportedFileURL: URL?
     
     var body: some View {
         NavigationView {
@@ -23,12 +26,19 @@ struct AnalyzerView: View {
             .navigationTitle("Disease Analysis")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if !viewModel.analysisResults.isEmpty {
-                        Button("New Analysis") {
-                            withAnimation {
-                                viewModel.analysisResults = []
+                    HStack(spacing: 16) {
+                        if !viewModel.analysisResults.isEmpty {
+                            Button(action: exportData) {
+                                Label("Export", systemImage: "square.and.arrow.up")
                             }
-                            
+                        }
+                        
+                        if !viewModel.analysisResults.isEmpty {
+                            Button("New Analysis") {
+                                withAnimation {
+                                    viewModel.analysisResults = []
+                                }
+                            }
                         }
                     }
                 }
@@ -57,10 +67,33 @@ struct AnalyzerView: View {
             } message: {
                 Text(errorMessage)
             }
+            .alert("Export Successful", isPresented: $showingExportSuccess) {
+                Button("Share") {
+                    showingShareSheet = true
+                }
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Patient data has been exported to CSV file. You can share it using the Share button.")
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                if let fileURL = exportedFileURL {
+                    ShareSheet(items: [fileURL])
+                }
+            }
             .sheet(isPresented: $showingHelp) {
                 helpView
             }
+            
         }
+        .navigationViewStyle(StackNavigationViewStyle())
+                .iPadAdaptive()  // Add this modifier
+                .adaptiveSheet(isPresented: $showingHelp) {
+                    NavigationView {
+                        helpView
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .iPadAdaptive()  // Also add to help view
+                }
     }
     
     private var loadingView: some View {
@@ -136,37 +169,45 @@ struct AnalyzerView: View {
     
     private var resultsView: some View {
         List {
+            Text("\(viewModel.analysisResults.count) Disease Groups Found")
+                .font(.headline)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 4)
+                .listRowBackground(Color.clear)
+            
             ForEach(viewModel.analysisResults) { group in
                 Section {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // Patients subsection
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("Patients (\(group.patients.count))", systemImage: "person.2")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            ForEach(group.patients, id: \.self) { patient in
-                                Text("• " + patient)
-                                    .font(.system(.body, design: .rounded))
-                            }
-                        }
-                        
-                        Divider()
-                        
-                        // Medications subsection
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("Recommended Medications", systemImage: "pills")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            ForEach(group.recommendedMedications, id: \.self) { medication in
-                                Text("• " + medication)
-                                    .font(.system(.body, design: .rounded))
+                    NavigationLink(destination: DiseaseGroupDetailView(diseaseGroup: group, viewModel: viewModel)) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Patients subsection
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Patients (\(group.patients.count))", systemImage: "person.2")
+                                    .font(.subheadline)
                                     .foregroundColor(.secondary)
+                                
+                                ForEach(group.patients, id: \.self) { patient in
+                                    Text("• " + patient)
+                                        .font(.system(.body, design: .rounded))
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            // Medications subsection
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Recommended Medications", systemImage: "pills")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                ForEach(group.recommendedMedications, id: \.self) { medication in
+                                    Text("• " + medication)
+                                        .font(.system(.body, design: .rounded))
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
+                        .padding(.vertical, 8)
                     }
-                    .padding(.vertical, 8)
                 } header: {
                     Text(group.disease)
                         .font(.headline)
@@ -195,6 +236,13 @@ struct AnalyzerView: View {
                     Text("• All suggestions should be reviewed by a medical professional")
                     Text("• This tool is for assistance only and does not replace clinical judgment")
                     Text("• Results are based on provided diagnostic notes")
+                }
+                
+                Section(header: Text("Export Features")) {
+                    Text("• Export patient data to CSV format")
+                    Text("• Includes diagnosis summaries and recommendations")
+                    Text("• Share via email or other apps")
+                    Text("• Data is encrypted for security")
                 }
             }
             .navigationTitle("Analysis Help")
@@ -254,6 +302,16 @@ struct AnalyzerView: View {
                     showError = true
                 }
             }
+        }
+    }
+    
+    private func exportData() {
+        if let fileURL = viewModel.saveCSVToFile() {
+            exportedFileURL = fileURL
+            showingExportSuccess = true
+        } else {
+            errorMessage = "Failed to export data"
+            showError = true
         }
     }
 }

@@ -132,6 +132,8 @@ struct AddPatientView: View {
             }
             .interactiveDismissDisabled(isLoading)
         }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .iPadAdaptive()
     }
     
     private func savePatient() {

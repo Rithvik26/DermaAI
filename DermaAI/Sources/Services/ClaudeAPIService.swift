@@ -1,29 +1,32 @@
 import Foundation
 import FirebaseAuth
 
-// MARK: - Disease Group Model
+
+// Update DiseaseGroup model to include timestamp
 struct DiseaseGroup: Identifiable, Codable {
     let id: UUID
     let disease: String
     let patients: [String]
     let recommendedMedications: [String]
     let timestamp: Date?
+    let analysisId: String  // Add this to track analysis sessions
     
-    init(id: UUID = UUID(), disease: String, patients: [String], recommendedMedications: [String], timestamp: Date? = nil) {
+    init(id: UUID = UUID(), disease: String, patients: [String], recommendedMedications: [String], timestamp: Date? = nil, analysisId: String = UUID().uuidString) {
         self.id = id
         self.disease = disease
         self.patients = patients
         self.recommendedMedications = recommendedMedications
         self.timestamp = timestamp ?? Date()
+        self.analysisId = analysisId
     }
     
-    // Add a method to convert to dictionary without server timestamp
     func toDictionary() -> [String: Any] {
         return [
             "disease": disease,
             "patients": patients,
             "recommendedMedications": recommendedMedications,
-            "timestamp": timestamp ?? Date()  // Use regular Date instead of FieldValue.serverTimestamp()
+            "timestamp": timestamp ?? Date(),
+            "analysisId": analysisId
         ]
     }
 }
@@ -39,7 +42,7 @@ class ClaudeAPIService {
     
     private init() {}
     
-    // MARK: - Analysis Methods
+    // Update analysis method to handle recommendation status
     func analyzePatientsData(_ patients: [Patient]) async throws -> [DiseaseGroup] {
         guard !patients.isEmpty else {
             throw APIError.invalidData
@@ -56,7 +59,15 @@ class ClaudeAPIService {
         
         print("🔍 Analyzing \(userPatients.count) patients")
         let patientData = try await decryptAndFormatPatientData(userPatients)
-        return try await performAnalysis(patientData: patientData)
+        let analysisId = UUID().uuidString
+        let results = try await performAnalysis(patientData: patientData, analysisId: analysisId)
+        
+        // Reset recommendation status for all analyzed patients
+        Task {
+            await resetRecommendationStatus(for: userPatients)
+        }
+        
+        return results
     }
     
     private func decryptAndFormatPatientData(_ patients: [Patient]) async throws -> [[String: String]] {
@@ -69,7 +80,7 @@ class ClaudeAPIService {
         }
     }
     
-    private func performAnalysis(patientData: [[String: String]]) async throws -> [DiseaseGroup] {
+    private func performAnalysis(patientData: [[String: String]], analysisId: String) async throws -> [DiseaseGroup] {
         guard let endpoint = URL(string: "https://api.anthropic.com/v1/messages") else {
             throw APIError.invalidURL
         }
@@ -127,8 +138,57 @@ class ClaudeAPIService {
                 disease: group.disease,
                 patients: group.patients,
                 recommendedMedications: group.recommended_medications,
-                timestamp: Date()  // Use current date instead of server timestamp
+                timestamp: Date(),
+                analysisId: analysisId
             )
+        }
+    }
+    
+    private func resetRecommendationStatus(for patients: [Patient]) async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        for var patient in patients {
+            do {
+                patient.recommendationStatus = .pending
+                try await FirestoreService.shared.updatePatient(patient)
+            } catch {
+                print("Failed to reset recommendation status for patient \(patient.name): \(error)")
+            }
+        }
+    }
+    
+    // Test API Connection method remains unchanged
+    func testAPI() async throws -> String {
+        guard !apiKey.isEmpty else {
+            throw APIError.authenticationError
+        }
+        
+        guard let endpoint = URL(string: "https://api.anthropic.com/v1/messages") else {
+            throw APIError.invalidURL
+        }
+        
+        print("🔑 Testing API with key length: \(apiKey.count)")
+        
+        let messageRequest = MessageRequest(
+            model: "claude-3-sonnet-20240229",
+            max_tokens: 1024,
+            messages: [
+                MessageRequest.Message(
+                    role: "user",
+                    content: "Please respond with 'Test successful' if you receive this message."
+                )
+            ]
+        )
+        
+        do {
+            let response: ClaudeAPIResponse = try await sendRequest(
+                to: endpoint,
+                body: messageRequest
+            )
+            return response.content.first?.text ?? "No response"
+        } catch {
+            print("❌ API Test Failed: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -174,41 +234,6 @@ class ClaudeAPIService {
         } catch {
             print("❌ Decoding Error: \(error)")
             throw APIError.decodingError(error as! DecodingError)
-        }
-    }
-    
-    // MARK: - Test API Connection
-    func testAPI() async throws -> String {
-        guard !apiKey.isEmpty else {
-            throw APIError.authenticationError
-        }
-        
-        guard let endpoint = URL(string: "https://api.anthropic.com/v1/messages") else {
-            throw APIError.invalidURL
-        }
-        
-        print("🔑 Testing API with key length: \(apiKey.count)")
-        
-        let messageRequest = MessageRequest(
-            model: "claude-3-sonnet-20240229",
-            max_tokens: 1024,
-            messages: [
-                MessageRequest.Message(
-                    role: "user",
-                    content: "Please respond with 'Test successful' if you receive this message."
-                )
-            ]
-        )
-        
-        do {
-            let response: ClaudeAPIResponse = try await sendRequest(
-                to: endpoint,
-                body: messageRequest
-            )
-            return response.content.first?.text ?? "No response"
-        } catch {
-            print("❌ API Test Failed: \(error.localizedDescription)")
-            throw error
         }
     }
 }

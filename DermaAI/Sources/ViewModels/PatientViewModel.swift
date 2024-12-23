@@ -420,3 +420,101 @@ class PatientViewModel: ObservableObject {
     
     
 }
+extension PatientViewModel {
+    func getPatientsByDiseaseGroup(_ group: DiseaseGroup) -> [Patient] {
+        let matchedPatients = patients.filter { patient in
+            group.patients.contains(patient.name)
+        }
+        return matchedPatients
+    }
+}
+// Add this extension to PatientViewModel
+extension PatientViewModel {
+    func saveCSVToFile() -> URL? {
+        do {
+            let csvString = try exportToCSV()
+            
+            // Get the temporary directory instead of documents
+            let tempDirectoryURL = FileManager.default.temporaryDirectory
+            
+            // Create filename with date
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd_HHmm"
+            let dateString = dateFormatter.string(from: Date())
+            let filename = "patients_export_\(dateString).csv"
+            
+            // Create file URL in temp directory
+            let fileURL = tempDirectoryURL.appendingPathComponent(filename)
+            
+            // Write to file
+            try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
+            
+            return fileURL
+        } catch {
+            print("Error saving CSV: \(error)")
+            return nil
+        }
+    }
+    
+    func exportToCSV() throws -> String {
+        // CSV Headers
+        let headers = [
+            "Patient Name",
+            "Diagnosis Heading",
+            "Diagnosis Summary",
+            "Current Medications",
+            "Recommended Medications",
+            "Recommendation Status",
+            "Last Updated"
+        ]
+        
+        // Start with headers
+        var csvString = headers.joined(separator: ",") + "\n"
+        
+        // Process each patient
+        for patient in patients {
+            var row: [String] = []
+            
+            // Patient Name
+            row.append("\"\(patient.name)\"")
+            
+            // Find the disease group for this patient
+            let diseaseGroup = analysisResults.first { group in
+                group.patients.contains(patient.name)
+            }
+            
+            // Diagnosis Heading (from disease group)
+            row.append("\"\(diseaseGroup?.disease ?? "Not Analyzed")\"")
+            
+            // Diagnosis Summary (decrypt)
+            let decryptedNotes = (try? EncryptionService.shared.decrypt(patient.diagnosisNotes)) ?? ""
+            row.append("\"\(decryptedNotes.replacingOccurrences(of: "\"", with: "\"\""))\"")
+            
+            // Current Medications
+            let currentMeds = patient.medications.map { med in
+                "\(med.name) (\(med.dosage), \(med.frequency))"
+            }.joined(separator: "; ")
+            row.append("\"\(currentMeds)\"")
+            
+            // Recommended Medications
+            let recommendedMeds = diseaseGroup?.recommendedMedications.joined(separator: "; ") ?? ""
+            row.append("\"\(recommendedMeds)\"")
+            
+            // Recommendation Status
+            let status = patient.recommendationStatus?.rawValue ?? "Not Reviewed"
+            row.append("\"\(status)\"")
+            
+            // Date/Timestamp
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .short
+            let dateStr = dateFormatter.string(from: patient.updatedAt ?? patient.createdAt ?? Date())
+            row.append("\"\(dateStr)\"")
+            
+            // Add the row to CSV
+            csvString += row.joined(separator: ",") + "\n"
+        }
+        
+        return csvString
+    }
+}

@@ -100,7 +100,10 @@ struct UserSettingsView: View {
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .iPadAdaptive()
     }
+        
 }
 
 struct EditProfileView: View {

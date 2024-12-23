@@ -1,43 +1,29 @@
-//
-//  AdaptiveSheet.swift
-//  DermaAI
-//
-//  Created by Rithvik Golthi on 12/23/24.
-//
-
-
 import SwiftUI
 
-struct AdaptiveSheet<T: View>: ViewModifier {
-    let content: T
-    let detents: Set<PresentationDetent>
-    
-    init(content: T, detents: Set<PresentationDetent> = [.medium, .large]) {
-        self.content = content
-        self.detents = detents
-    }
-    
+struct iPadAdaptiveModifier: ViewModifier {
     func body(content: Content) -> some View {
-        content.sheet(isPresented: .constant(true)) {
+        if UIDevice.current.userInterfaceIdiom == .pad {
             content
-                .presentationDetents(detents)
+                .frame(
+                    width: UIScreen.main.bounds.width * 0.85,
+                    height: UIScreen.main.bounds.height * 0.85
+                )
+                .presentationDetents([PresentationDetent.large])
                 .presentationDragIndicator(.visible)
-                .if(UIDevice.current.userInterfaceIdiom == .pad) { view in
-                    view.frame(minWidth: 540, minHeight: 620)
-                }
+                .interactiveDismissDisabled()
+        } else {
+            content
         }
     }
 }
 
 extension View {
-    func adaptiveSheet<T: View>(
-        detents: Set<PresentationDetent> = [.medium, .large],
-        @ViewBuilder content: () -> T
-    ) -> some View {
-        self.modifier(AdaptiveSheet(content: content(), detents: detents))
+    func iPadAdaptive() -> some View {
+        modifier(iPadAdaptiveModifier())
     }
     
-    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+    @ViewBuilder
+    func `if`<Transform: View>(_ condition: Bool, transform: (Self) -> Transform) -> some View {
         if condition {
             transform(self)
         } else {
@@ -46,20 +32,38 @@ extension View {
     }
 }
 
-struct iPadAdaptiveSize: ViewModifier {
+// Optional: Add a specific sheet modifier if needed
+struct SheetWithModifiers<SheetContent: View>: ViewModifier {
+    let isPresented: Binding<Bool>
+    let sheetContent: () -> SheetContent
+    
+    init(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> SheetContent) {
+        self.isPresented = isPresented
+        self.sheetContent = content
+    }
+    
     func body(content: Content) -> some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            content
-                .frame(minWidth: 540, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
-                .frame(width: UIScreen.main.bounds.width * 0.7)
-        } else {
-            content
+        content.sheet(isPresented: isPresented) {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                sheetContent()
+                    .frame(
+                        width: UIScreen.main.bounds.width * 0.85,
+                        height: UIScreen.main.bounds.height * 0.85
+                    )
+                    .presentationDetents([PresentationDetent.large])
+                    .presentationDragIndicator(.visible)
+            } else {
+                sheetContent()
+            }
         }
     }
 }
 
 extension View {
-    func iPadAdaptiveSize() -> some View {
-        modifier(iPadAdaptiveSize())
+    func adaptiveSheet<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        modifier(SheetWithModifiers(isPresented: isPresented, content: content))
     }
 }

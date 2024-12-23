@@ -71,7 +71,6 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 12) {
-                        // User Profile Button
                         Button(action: { showingSettings = true }) {
                             Circle()
                                 .fill(Color.blue)
@@ -115,7 +114,6 @@ struct ContentView: View {
                     }
                 }
                 
-                // Delete button appears when in edit mode and items are selected
                 if isEditing && !selectedPatients.isEmpty {
                     ToolbarItem(placement: .bottomBar) {
                         Button(role: .destructive, action: {
@@ -127,29 +125,45 @@ struct ContentView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddPatient) {
-                AddPatientView(viewModel: viewModel)
+            
+            // Default detail view for iPad
+            Text("Select a patient to view details")
+                .font(.headline)
+                .foregroundColor(.gray)
+        }
+        .navigationViewStyle(.stack) // This forces stack navigation on all devices
+        .sheet(isPresented: $showingAddPatient) {
+            AddPatientView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingAnalyzer) {
+            AnalyzerView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingSettings) {
+            UserSettingsView()
+        }
+        .adaptiveSheet(isPresented: $showingAddPatient) {
+            AddPatientView(viewModel: viewModel)
+        }
+        .adaptiveSheet(isPresented: $showingAnalyzer) {
+            AnalyzerView(viewModel: viewModel)
+        }
+        .adaptiveSheet(isPresented: $showingSettings) {
+            UserSettingsView()
+        }
+
+        .alert("Delete Patients", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteSelectedPatients()
             }
-            .sheet(isPresented: $showingAnalyzer) {
-                AnalyzerView(viewModel: viewModel)
-            }
-            .sheet(isPresented: $showingSettings) {
-                UserSettingsView()
-            }
-            .alert("Delete Patients", isPresented: $showingDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    deleteSelectedPatients()
-                }
-            } message: {
-                Text("Are you sure you want to delete \(selectedPatients.count) patient\(selectedPatients.count == 1 ? "" : "s")? This action cannot be undone.")
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                }
+        } message: {
+            Text("Are you sure you want to delete \(selectedPatients.count) patient\(selectedPatients.count == 1 ? "" : "s")? This action cannot be undone.")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
             }
         }
     }
@@ -170,8 +184,6 @@ struct ContentView: View {
     }
 }
 
-
-// Custom SearchBar View
 struct SearchBar: View {
     @Binding var text: String
     
@@ -198,3 +210,4 @@ struct SearchBar: View {
         .cornerRadius(10)
     }
 }
+    

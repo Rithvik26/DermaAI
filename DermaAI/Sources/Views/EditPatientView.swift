@@ -130,7 +130,10 @@ struct EditPatientView: View {
             } message: {
                 Text(alertMessage)
             }
+            
         }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .iPadAdaptive()
     }
     
     
