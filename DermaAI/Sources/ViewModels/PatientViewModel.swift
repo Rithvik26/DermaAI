@@ -14,8 +14,9 @@ class PatientViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var showError = false
     @Published var searchText = ""
-    
-    
+    @Published private(set) var hasLoadedAnalysis = false
+    private var listenerSuspended = false
+
     // MARK: - Private Properties
     private let firestoreService: FirestoreService
     private let authService: AuthenticationService
@@ -50,6 +51,7 @@ class PatientViewModel: ObservableObject {
         if let userId = authService.currentUser?.uid {
             Task {
                 await setupFirestoreListener()
+                await loadLatestAnalysis()
             }
         }
     }
@@ -59,8 +61,6 @@ class PatientViewModel: ObservableObject {
             cleanupFirestoreListener()
         }
     }
-    
-    
     
     // MARK: - Authentication Handling
     private func setupAuthSubscription() {
@@ -80,10 +80,16 @@ class PatientViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    // MARK: - Firestore Listener Setup
+    // MARK: - Firestore Listener Management
     private func setupFirestoreListener() {
         guard let userId = Auth.auth().currentUser?.uid else {
             print("⚠️ No authenticated user found when setting up listener")
+            return
+        }
+        
+        // Skip if listener is suspended
+        guard !listenerSuspended else {
+            print("🔕 Listener setup skipped - currently suspended")
             return
         }
         
@@ -97,6 +103,11 @@ class PatientViewModel: ObservableObject {
             .order(by: "createdAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
+                
+                guard !self.listenerSuspended else {
+                    print("🔕 Listener update skipped - currently suspended")
+                    return
+                }
                 
                 if let error = error {
                     print("❌ Firestore listener error: \(error)")
@@ -119,12 +130,29 @@ class PatientViewModel: ObservableObject {
                             self.patients = updatedPatients
                             self.updateDiagnosisGroups()
                         }
+                        
+                        await self.loadLatestAnalysis()
                     } catch {
                         print("❌ Error processing patients: \(error)")
                         self.handleError(error)
                     }
                 }
             }
+    }
+    
+    func suspendListener() {
+        print("🔕 Suspending Firestore listener")
+        listenerSuspended = true
+        cleanupFirestoreListener()
+    }
+    
+    func resumeListener() {
+        print("🔔 Resuming Firestore listener")
+        listenerSuspended = false
+        Task {
+            await setupFirestoreListener()
+            await loadLatestAnalysis()
+        }
     }
     
     private func cleanupFirestoreListener() {
@@ -175,6 +203,14 @@ class PatientViewModel: ObservableObject {
         print("🔄 Updating patient: \(patient.name)")
         let encryptedPatient = try await encryptPatientData(updatedPatient)
         try await firestoreService.updatePatient(encryptedPatient)
+        
+        // Update local state immediately
+        if let index = patients.firstIndex(where: { $0.id == patient.id }) {
+            await MainActor.run {
+                patients[index] = updatedPatient
+            }
+        }
+        
         print("✅ Successfully updated patient: \(patient.name)")
     }
     
@@ -356,7 +392,86 @@ class PatientViewModel: ObservableObject {
         }
         diagnosisGroups = newGroups
     }
-    
+    private func loadLatestAnalysis() async {
+           guard let userId = Auth.auth().currentUser?.uid else { return }
+           
+           do {
+               let db = Firestore.firestore()
+               let snapshot = try await db.collection("users")
+                   .document(userId)
+                   .collection("analyses")
+                   .order(by: "timestamp", descending: true)
+                   .limit(to: 1)
+                   .getDocuments()
+               
+               guard let latestAnalysis = snapshot.documents.first,
+                     let groupsData = latestAnalysis.data()["groups"] as? [[String: Any]] else {
+                   hasLoadedAnalysis = true
+                   return
+               }
+               
+               // Parse the groups data
+               let groups = groupsData.compactMap { groupData -> DiseaseGroup? in
+                   guard let disease = groupData["disease"] as? String,
+                         let patients = groupData["patients"] as? [String],
+                         let medications = groupData["recommendedMedications"] as? [String] else {
+                       return nil
+                   }
+                   
+                   return DiseaseGroup(
+                       disease: disease,
+                       patients: patients,
+                       recommendedMedications: medications,
+                       timestamp: (groupData["timestamp"] as? Timestamp)?.dateValue(),
+                       analysisId: groupData["analysisId"] as? String ?? UUID().uuidString
+                   )
+               }
+               
+               await MainActor.run {
+                   self.analysisResults = groups
+                   self.updateDiagnosisGroups()
+                   self.hasLoadedAnalysis = true
+               }
+               
+               // Load recommendation statuses for patients
+               await loadPatientRecommendationStatuses()
+               
+           } catch {
+               print("Error loading analysis: \(error)")
+               await MainActor.run {
+                   self.hasLoadedAnalysis = true
+               }
+           }
+       }
+       
+    private func loadPatientRecommendationStatuses() async {
+           guard let userId = Auth.auth().currentUser?.uid else { return }
+           
+           do {
+               let snapshot = try await db.collection("patients")
+                   .whereField("userId", isEqualTo: userId)
+                   .getDocuments()
+               
+               var updatedPatients = self.patients
+               
+               for document in snapshot.documents {
+                   if let patientData = document.data() as? [String: Any],
+                      let patientId = patientData["id"] as? String,
+                      let statusString = patientData["recommendationStatus"] as? String,
+                      let status = Patient.RecommendationStatus(rawValue: statusString),
+                      let index = updatedPatients.firstIndex(where: { $0.id.uuidString == patientId }) {
+                       
+                       updatedPatients[index].recommendationStatus = status
+                   }
+               }
+               
+               await MainActor.run {
+                   self.patients = updatedPatients
+               }
+           } catch {
+               print("Error loading recommendation statuses: \(error)")
+           }
+       }
     private func handleError(_ error: Error) {
         errorMessage = switch error {
         case let firestoreError as FirestoreError:

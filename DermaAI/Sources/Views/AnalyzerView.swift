@@ -7,93 +7,90 @@ struct AnalyzerView: View {
     @State private var isTesting = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var showingHelp = false
     @State private var showingExportSuccess = false
     @State private var showingShareSheet = false
     @State private var exportedFileURL: URL?
+    @StateObject private var networkReachability = NetworkReachability.shared
     
     var body: some View {
-        NavigationView {
-            Group {
-                if isAnalyzing || isTesting {
-                    loadingView
-                } else if viewModel.analysisResults.isEmpty {
-                    emptyStateView
-                } else {
-                    resultsView
-                }
+        Group {
+            if isAnalyzing || isTesting {
+                loadingView
+            } else if !viewModel.hasLoadedAnalysis {
+                ProgressView("Loading previous analysis...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.analysisResults.isEmpty {
+                emptyStateView
+            } else {
+                resultsView
             }
-            .navigationTitle("Disease Analysis")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
-                        if !viewModel.analysisResults.isEmpty {
-                            Button(action: exportData) {
-                                Label("Export", systemImage: "square.and.arrow.up")
-                            }
+        }
+        .navigationTitle("Disease Analysis")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 16) {
+                    if !viewModel.analysisResults.isEmpty {
+                        Button(action: exportData) {
+                            Label("Export", systemImage: "square.and.arrow.up")
                         }
                         
-                        if !viewModel.analysisResults.isEmpty {
-                            Button("New Analysis") {
-                                withAnimation {
-                                    viewModel.analysisResults = []
-                                }
+                        Button("New Analysis") {
+                            withAnimation {
+                                viewModel.analysisResults = []
                             }
                         }
                     }
                 }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingHelp = true
-                    } label: {
-                        Image(systemName: "questionmark.circle")
-                    }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(destination: AnalysisHelpView()) {
+                    Image(systemName: "questionmark.circle")
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-                Button("Try Again", role: .none) {
-                    if !isTesting {
-                        startAnalysis()
-                    } else {
-                        testAPI()
-                    }
-                }
-            } message: {
-                Text(errorMessage)
-            }
-            .alert("Export Successful", isPresented: $showingExportSuccess) {
-                Button("Share") {
-                    showingShareSheet = true
-                }
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Patient data has been exported to CSV file. You can share it using the Share button.")
-            }
-            .sheet(isPresented: $showingShareSheet) {
-                if let fileURL = exportedFileURL {
-                    ShareSheet(items: [fileURL])
-                }
-            }
-            .sheet(isPresented: $showingHelp) {
-                helpView
-            }
-            
         }
-        .navigationViewStyle(StackNavigationViewStyle())
-                .iPadAdaptive()  // Add this modifier
-                .adaptiveSheet(isPresented: $showingHelp) {
-                    NavigationView {
-                        helpView
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .iPadAdaptive()  // Also add to help view
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+            Button("Try Again", role: .none) {
+                if !isTesting {
+                    startAnalysis()
+                } else {
+                    testAPI()
                 }
+            }
+        } message: {
+            Text(errorMessage)
+        }
+        .alert("Export Successful", isPresented: $showingExportSuccess) {
+            Button("Share") {
+                showingShareSheet = true
+            }
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Patient data has been exported to CSV file. You can share it using the Share button.")
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            if let fileURL = exportedFileURL {
+                ShareSheet(items: [fileURL])
+            }
+        }
+        .overlay {
+            if !networkReachability.isConnected {
+                VStack {
+                    HStack {
+                        Image(systemName: "wifi.slash")
+                        Text("You are offline")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.red.opacity(0.8))
+                    .cornerRadius(8)
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+                .padding(.top)
+            }
+        }
     }
     
     private var loadingView: some View {
@@ -141,7 +138,7 @@ struct AnalyzerView: View {
                     .background(Color.blue)
                     .cornerRadius(10)
                 }
-                .disabled(viewModel.patients.isEmpty)
+                .disabled(viewModel.patients.isEmpty || !networkReachability.isConnected)
                 
                 Button(action: testAPI) {
                     HStack {
@@ -154,6 +151,7 @@ struct AnalyzerView: View {
                     .background(Color.green)
                     .cornerRadius(10)
                 }
+                .disabled(!networkReachability.isConnected)
             }
             .padding(.horizontal)
             
@@ -177,7 +175,12 @@ struct AnalyzerView: View {
             
             ForEach(viewModel.analysisResults) { group in
                 Section {
-                    NavigationLink(destination: DiseaseGroupDetailView(diseaseGroup: group, viewModel: viewModel)) {
+                    NavigationLink(
+                        destination: DiseaseGroupDetailView(
+                            diseaseGroup: group,
+                            viewModel: viewModel
+                        )
+                    ) {
                         VStack(alignment: .leading, spacing: 16) {
                             // Patients subsection
                             VStack(alignment: .leading, spacing: 8) {
@@ -218,45 +221,13 @@ struct AnalyzerView: View {
         .listStyle(.insetGrouped)
     }
     
-    private var helpView: some View {
-        NavigationView {
-            List {
-                Section(header: Text("About the Analysis")) {
-                    Text("The analyzer uses advanced AI to group patients based on their diagnostic notes and symptoms. It identifies common patterns and suggests appropriate treatments.")
-                }
-                
-                Section(header: Text("How it Works")) {
-                    Text("1. Collects all patient diagnostic notes")
-                    Text("2. Analyzes symptoms and conditions")
-                    Text("3. Groups similar cases together")
-                    Text("4. Suggests common treatments")
-                }
-                
-                Section(header: Text("Important Notes")) {
-                    Text("• All suggestions should be reviewed by a medical professional")
-                    Text("• This tool is for assistance only and does not replace clinical judgment")
-                    Text("• Results are based on provided diagnostic notes")
-                }
-                
-                Section(header: Text("Export Features")) {
-                    Text("• Export patient data to CSV format")
-                    Text("• Includes diagnosis summaries and recommendations")
-                    Text("• Share via email or other apps")
-                    Text("• Data is encrypted for security")
-                }
-            }
-            .navigationTitle("Analysis Help")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showingHelp = false
-                    }
-                }
-            }
-        }
-    }
-    
     private func startAnalysis() {
+        guard networkReachability.isConnected else {
+            errorMessage = "You are currently offline. Please check your internet connection and try again."
+            showError = true
+            return
+        }
+        
         guard !viewModel.patients.isEmpty else {
             errorMessage = "No patients to analyze. Add some patients first."
             showError = true
@@ -264,23 +235,37 @@ struct AnalyzerView: View {
         }
         
         isAnalyzing = true
+        
+        // Suspend listener before analysis
+        viewModel.suspendListener()
+        
         Task {
             do {
                 try await viewModel.analyzePatientsInBatch()
                 await MainActor.run {
                     isAnalyzing = false
+                    // Resume listener after analysis
+                    viewModel.resumeListener()
                 }
             } catch {
                 await MainActor.run {
                     isAnalyzing = false
                     errorMessage = "Analysis failed: \(error.localizedDescription)"
                     showError = true
+                    // Resume listener on error
+                    viewModel.resumeListener()
                 }
             }
         }
     }
     
     private func testAPI() {
+        guard networkReachability.isConnected else {
+            errorMessage = "You are currently offline. Please check your internet connection and try again."
+            showError = true
+            return
+        }
+        
         isTesting = true
         Task {
             do {
@@ -316,6 +301,40 @@ struct AnalyzerView: View {
     }
 }
 
+// Create a separate view for Analysis Help
+struct AnalysisHelpView: View {
+    var body: some View {
+        List {
+            Section(header: Text("About the Analysis")) {
+                Text("The analyzer uses advanced AI to group patients based on their diagnostic notes and symptoms. It identifies common patterns and suggests appropriate treatments.")
+            }
+            
+            Section(header: Text("How it Works")) {
+                Text("1. Collects all patient diagnostic notes")
+                Text("2. Analyzes symptoms and conditions")
+                Text("3. Groups similar cases together")
+                Text("4. Suggests common treatments")
+            }
+            
+            Section(header: Text("Important Notes")) {
+                Text("• All suggestions should be reviewed by a medical professional")
+                Text("• This tool is for assistance only and does not replace clinical judgment")
+                Text("• Results are based on provided diagnostic notes")
+            }
+            
+            Section(header: Text("Export Features")) {
+                Text("• Export patient data to CSV format")
+                Text("• Includes diagnosis summaries and recommendations")
+                Text("• Share via email or other apps")
+                Text("• Data is encrypted for security")
+            }
+        }
+        .navigationTitle("Analysis Help")
+    }
+}
+
 #Preview {
-    AnalyzerView(viewModel: PatientViewModel())
+    NavigationView {
+        AnalyzerView(viewModel: PatientViewModel())
+    }
 }

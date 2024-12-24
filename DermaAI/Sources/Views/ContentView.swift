@@ -5,7 +5,6 @@ struct ContentView: View {
     @ObservedObject var viewModel: PatientViewModel
     @StateObject private var authService = AuthenticationService.shared
     @State private var showingAddPatient = false
-    @State private var showingAnalyzer = false
     @State private var showingSettings = false
     @State private var showError = false
     @State private var errorMessage: String?
@@ -84,7 +83,8 @@ struct ContentView: View {
                         }
                         .disabled(isEditing)
                         
-                        Button(action: { showingAnalyzer = true }) {
+                        // Changed from sheet to NavigationLink for Analysis
+                        NavigationLink(destination: AnalyzerView(viewModel: viewModel)) {
                             Image(systemName: "waveform.path.ecg")
                                 .font(.system(size: 20))
                         }
@@ -131,26 +131,13 @@ struct ContentView: View {
                 .font(.headline)
                 .foregroundColor(.gray)
         }
-        .navigationViewStyle(.stack) // This forces stack navigation on all devices
+        .navigationViewStyle(.stack)
         .sheet(isPresented: $showingAddPatient) {
             AddPatientView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingAnalyzer) {
-            AnalyzerView(viewModel: viewModel)
         }
         .sheet(isPresented: $showingSettings) {
             UserSettingsView()
         }
-        .adaptiveSheet(isPresented: $showingAddPatient) {
-            AddPatientView(viewModel: viewModel)
-        }
-        .adaptiveSheet(isPresented: $showingAnalyzer) {
-            AnalyzerView(viewModel: viewModel)
-        }
-        .adaptiveSheet(isPresented: $showingSettings) {
-            UserSettingsView()
-        }
-
         .alert("Delete Patients", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -210,4 +197,7 @@ struct SearchBar: View {
         .cornerRadius(10)
     }
 }
-    
+
+#Preview {
+    ContentView(viewModel: PatientViewModel())
+}
